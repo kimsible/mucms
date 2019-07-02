@@ -2,6 +2,9 @@
   "name": "mucms",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=12.5.0"
+  },
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
@@ -16,7 +19,9 @@
     "@vue/eslint-config-standard": "^4.0.0",
     "ava": "^2.1.0",
     "babel-eslint": "^10.0.1",
+    "copy-webpack-plugin": "^5.0.3",
     "core-js": "^2.6.5",
+    "end-webpack-plugin": "^4.0.0",
     "eslint": "^5.16.0",
     "eslint-plugin-vue": "^5.0.0",
     "lint-staged": "^8.1.5",
