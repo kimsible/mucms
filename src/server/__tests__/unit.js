@@ -1,15 +1,18 @@
 'use strict'
 
 import test from 'ava'
-
 import { request, createServer } from 'http'
-import body from '../body'
-
 import { resolve } from 'path'
 import { promises as fs } from 'fs'
+import { exec } from 'child_process'
+
+import body from '../body'
+
 import { create as createStatic, open as openStatic } from '../static'
 
 import auth from '../auth'
+
+import Git from '../git'
 
 test('body', bodyTest, 'my-body', 'my-body')
 
@@ -61,3 +64,57 @@ function authCredentialsTest (t, input, output) {
   t.is(email, output.email)
   t.is(id, output.id)
 }
+
+const repoPath = '/tmp/repo'
+const repoConnectionUrl = 'https://kimsible:password@github.com/kimsible/mucms'
+test('git constructor', gitConstructorTest, 'kimsible', 'password', 'github.com/kimsible/mucms')
+test('git constructor - email user and password with @ and :', gitConstructorTest, 'kimsible@domain.com', 'pass@pass@@:', 'github.com/kimsible/mucms')
+
+function gitConstructorTest (t, username, password, url) {
+  const repo = new Git(`https://${username}:${password}@${url}`, repoPath)
+  t.is(repo.username, username)
+  t.is(repo.password, password)
+  t.is(repo.url, url)
+}
+
+test.before(async t => {
+  const repo = new Git(repoConnectionUrl, repoPath)
+  await repo.open()
+  await repo.pull()
+})
+
+test('git open', async t => {
+  t.is(await fs.access(repoPath), undefined)
+})
+
+test('git find', async t => {
+  const repo = new Git(repoConnectionUrl, repoPath)
+  await repo.open()
+  const files = await repo.find(['.md'])
+  t.true(files.length > 0)
+  const file = files.find(file => file.name === 'README.md')
+  t.is(typeof file, 'object')
+  t.is(file.name, 'README.md')
+  t.is(file.path, 'README.md')
+  t.is(file.data, await fs.readFile(resolve(repoPath, 'README.md'), 'utf8'))
+})
+
+test('git commit and push', async t => {
+  const file = {
+    name: 'testcommit&push',
+    path: 'testcommit&push',
+    data: 'commit&push test'
+  }
+  const repo = new Git(repoConnectionUrl, repoPath)
+  await repo.open()
+  const oid = await repo.commit([file])
+  t.is(typeof oid, 'object')
+  t.is(oid.constructor.name, 'Oid')
+  t.is(await fs.access(resolve(repoPath, 'testcommit&push')), undefined)
+  t.is(await fs.readFile(resolve(repoPath, 'testcommit&push'), 'utf8'), file.data)
+  await t.throwsAsync(repo.push(), Error)
+})
+
+test.after.always(async t => {
+  await exec(`rm -Rf ${repoPath}`)
+})
