@@ -35,14 +35,15 @@ async function bodyTest (t, input, expected) {
   t.deepEqual(await body(res), expected)
 }
 
-test('static', staticTest, { url: '/img/logo.1234.png', contentType: 'image/png' })
+test('static - image.png', staticTest, { url: '/img/logo.1234.png', contentType: 'image/png' })
+test('static - index.html', staticTest, { url: '/', contentType: 'text/html' })
 
 async function staticTest (t, input) {
   const cwd = resolve(__dirname, '../../../test/fixtures')
   createStatic(cwd)
   const { contentType, data } = await openStatic({ url: input.url })
   t.regex(contentType, new RegExp(input.contentType))
-  t.deepEqual(data, await fs.readFile(cwd + input.url))
+  t.deepEqual(data, await fs.readFile(cwd + (input.url === '/' ? '/index.html' : input.url)))
 }
 
 test('auth/encrypt - with salt', authEncryptTest, 'email@provider.com', 'salt')
