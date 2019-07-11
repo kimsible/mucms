@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "mime-types": "^2.1.24",
-    "nodegit": "^0.24.3"
+    "nodegit": "^0.24.3",
+    "nodemailer": "^6.2.1"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.8.0",
