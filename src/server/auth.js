@@ -14,12 +14,19 @@ const encrypt = (string, salt = SALT) => (new Promise((resolve, reject) => {
 }))
 
 const credentials = req => {
-  const { authorization } = req.headers
+  const { authorization = '' } = req.headers
   try {
-    const [, base64Credentials] = (authorization || '').match(/^Basic (.+)$/)
+    const [, base64Credentials] = authorization.match(/^Basic (.+)$/)
     return Buffer.from(base64Credentials, 'base64').toString('utf-8').split(':')
   } catch {
     return []
+  }
+}
+
+const cors = (req, domains = []) => {
+  const { host = '', origin = '' } = req.headers
+  if (!domains.includes(host) && !domains.includes(origin.replace('https://', ''))) {
+    throw new Error('Unauthorized Error')
   }
 }
 
@@ -34,5 +41,6 @@ const access = async req => {
 module.exports = {
   encrypt,
   credentials,
+  cors,
   access
 }
