@@ -2,7 +2,7 @@
 
 const crypto = require('crypto')
 
-const { SALT } = process.env
+const { SALT, CORS = '' } = process.env
 
 const encrypt = (string, salt = SALT) => (new Promise((resolve, reject) => {
   crypto.pbkdf2(string, salt, 100000, 32, 'sha512', (error, data) => {
@@ -23,18 +23,24 @@ const credentials = req => {
   }
 }
 
-const cors = (req, domains = []) => {
+const throwUnauthorizedError = () => {
+  const error = new Error('Unauthorized Error')
+  error.statusCode = 401
+  throw error
+}
+
+const cors = (req, domains = CORS.split(',').map(domain => domain.replace('https://', ''))) => {
   const { host = '', origin = '' } = req.headers
   if (!domains.includes(host) && !domains.includes(origin.replace('https://', ''))) {
-    throw new Error('Unauthorized Error')
+    throwUnauthorizedError()
   }
 }
 
 const access = async req => {
-  const [email, id] = credentials(req)
-  const encryptedEmail = await encrypt(email)
-  if (encryptedEmail !== id) {
-    throw new Error('Unauthorized Error')
+  const [user, id] = credentials(req)
+  const encryptedUser = await encrypt(user)
+  if (encryptedUser !== id) {
+    throwUnauthorizedError()
   }
 }
 

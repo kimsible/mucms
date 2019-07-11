@@ -1,49 +1,31 @@
 'use strict'
 
 import test from 'ava'
-import { request, createServer } from 'http'
 import { resolve } from 'path'
-import { promises as fs } from 'fs'
+import { promises as fs, createReadStream } from 'fs'
 import { exec } from 'child_process'
 
-import body from '../body'
-
-import { create as createStatic, open as openStatic } from '../static'
-
+import file from '../file'
 import auth from '../auth'
-
 import Git from '../git'
 
-test('body', bodyTest, 'my-body', 'my-body')
+const cwd = resolve(__dirname, '../../../test/fixtures')
 
-async function bodyTest (t, input, expected) {
-  const server = createServer(async (req, res) => {
-    try {
-      res.end(await body(req))
-    } catch (err) {
-      res.end(err.contructor.name)
-    }
-  }).listen()
+test('file/open - /img/image.png', fileTest, { url: '/img/logo.1234.png' }, createReadStream(cwd + '/img/logo.1234.png'))
+test('file/open - /', fileTest, { url: '/' }, createReadStream(cwd + '/index.html'))
+test('file/open - /index.html - not found', throwsFileTest, { url: '/index.html' })
+test('file/open - /js/file.js - not found', throwsFileTest, { url: '/js/file.js' })
 
-  const res = await new Promise((resolve, reject) => {
-    const req = request({ port: server.address().port, method: 'POST' }, resolve)
-    req.on('error', reject)
-    req.write(input)
-    req.end()
-  })
-
-  t.deepEqual(await body(res), expected)
+async function fileTest (t, input, output) {
+  const data = await file.open({ url: input.url }, cwd)
+  t.is(data.constructor.name, output.constructor.name)
 }
 
-test('static - image.png', staticTest, { url: '/img/logo.1234.png', contentType: 'image/png' })
-test('static - index.html', staticTest, { url: '/', contentType: 'text/html' })
-
-async function staticTest (t, input) {
-  const cwd = resolve(__dirname, '../../../test/fixtures')
-  createStatic(cwd)
-  const { contentType, data } = await openStatic({ url: input.url })
-  t.regex(contentType, new RegExp(input.contentType))
-  t.deepEqual(data, await fs.readFile(cwd + (input.url === '/' ? '/index.html' : input.url)))
+async function throwsFileTest (t, input) {
+  await t.throwsAsync(file.open({ url: input.url }, cwd), {
+    instanceOf: Error,
+    message: 'Not Found'
+  })
 }
 
 test('auth/encrypt - with salt', authEncryptTest, 'email@provider.com', 'salt')
@@ -53,16 +35,17 @@ async function authEncryptTest (t, input, salt) {
   t.not(encrypted, input)
 }
 
-test('auth/credentials - OK', authCredentialsTest, `Basic ${Buffer.from('user@provider.com:GwJexPcIEeAnPTtH091ynxodjXCo86/j').toString('base64')}`, { email: 'user@provider.com', id: 'GwJexPcIEeAnPTtH091ynxodjXCo86/j' })
-test('auth/credentials - wrong header', authCredentialsTest, `${Buffer.from('user@provider.com:GwJexPcIEeAnPTtH091ynxodjXCo86/j').toString('base64')}`, { email: undefined, id: undefined })
+test('auth/credentials - OK - app.domain.com', authCredentialsTest, `Basic ${Buffer.from('app.domain.com:GwJexPcIEeAnPTtH091ynxodjXCo86/j').toString('base64')}`, { user: 'app.domain.com', id: 'GwJexPcIEeAnPTtH091ynxodjXCo86/j' })
+test('auth/credentials - OK - user@provider.com', authCredentialsTest, `Basic ${Buffer.from('user@provider.com:GwJexPcIEeAnPTtH091ynxodjXCo86/j').toString('base64')}`, { user: 'user@provider.com', id: 'GwJexPcIEeAnPTtH091ynxodjXCo86/j' })
+test('auth/credentials - wrong header', authCredentialsTest, `${Buffer.from('user@provider.com:GwJexPcIEeAnPTtH091ynxodjXCo86/j').toString('base64')}`, { user: undefined, id: undefined })
 
 function authCredentialsTest (t, input, output) {
-  const [email, id] = auth.credentials({
+  const [user, id] = auth.credentials({
     headers: {
       authorization: input
     }
   })
-  t.is(email, output.email)
+  t.is(user, output.user)
   t.is(id, output.id)
 }
 
