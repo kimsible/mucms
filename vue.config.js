@@ -11,7 +11,7 @@ module.exports = {
       }]),
       new EndWebpackPlugin(() => {
         const { engines, dependencies } = require('./package.json')
-        require('fs').writeFileSync('./dist/package.json', JSON.stringify({ engines, dependencies, main: 'server', scripts: { start: 'node server' } }))
+        require('fs').writeFileSync('./dist/package.json', JSON.stringify({ engines, dependencies, main: 'server', scripts: { start: 'micro -l tcp://${HOST-0.0.0.0}:${PORT-3000}' } }))
       })
     ]
   }

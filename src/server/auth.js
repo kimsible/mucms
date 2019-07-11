@@ -1,7 +1,7 @@
 'use strict'
 
 const crypto = require('crypto')
-
+const { createError } = require('micro')
 const { SALT, CORS = '' } = process.env
 
 const encrypt = (string, salt = SALT) => (new Promise((resolve, reject) => {
@@ -23,16 +23,10 @@ const credentials = req => {
   }
 }
 
-const throwUnauthorizedError = () => {
-  const error = new Error('Unauthorized Error')
-  error.statusCode = 401
-  throw error
-}
-
 const cors = (req, domains = CORS.split(',').map(domain => domain.replace('https://', ''))) => {
   const { host = '', origin = '' } = req.headers
   if (!domains.includes(host) && !domains.includes(origin.replace('https://', ''))) {
-    throwUnauthorizedError()
+    throw createError(401, 'Unauthorized Error')
   }
 }
 
@@ -40,7 +34,7 @@ const access = async req => {
   const [user, id] = credentials(req)
   const encryptedUser = await encrypt(user)
   if (encryptedUser !== id) {
-    throwUnauthorizedError()
+    throw createError(401, 'Unauthorized Error')
   }
 }
 

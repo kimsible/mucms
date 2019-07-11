@@ -1,12 +1,7 @@
 'use strict'
 
 const { promises: fs, createReadStream } = require('fs')
-
-const throwNotFoundError = () => {
-  const error = new Error('Not Found')
-  error.statusCode = 404
-  throw error
-}
+const { createError } = require('micro')
 
 module.exports.open = async ({ url }, path = process.cwd()) => {
   if (url === '/') {
@@ -18,8 +13,8 @@ module.exports.open = async ({ url }, path = process.cwd()) => {
       await fs.access(filepath)
       return createReadStream(filepath)
     } catch {
-      throwNotFoundError()
+      throw createError(404, 'Not Found')
     }
   }
-  throwNotFoundError()
+  throw createError(404, 'Not Found')
 }
